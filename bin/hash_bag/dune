@@ -1,0 +1,4 @@
+(library
+ (name hash_bag)
+ (modules hash_bag)
+ (libraries containers-data utils))
