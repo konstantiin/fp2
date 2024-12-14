@@ -1,8 +1,17 @@
-type 'a hash_map
+module type Hashable = sig
+  type t
 
-val find : 'a hash_map -> 'a -> bool
-val add : 'a hash_map -> 'a -> 'a hash_map
-val remove : 'a hash_map -> 'a -> 'a hash_map
-val size : 'a hash_map -> int
-val count : 'a hash_map -> 'a -> int
-val init : ('a -> int) -> 'a hash_map
+  val hash : t -> int
+end
+
+module Make (M : Hashable) : sig
+  type hash_map
+
+  val find : hash_map -> M.t -> bool
+  val add : hash_map -> M.t -> hash_map
+  val remove : hash_map -> M.t -> hash_map
+  val size : hash_map -> int
+  val count : hash_map -> M.t -> int
+  val join : hash_map -> hash_map -> hash_map
+  val empty : unit -> hash_map
+end
