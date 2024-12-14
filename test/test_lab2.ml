@@ -36,8 +36,14 @@ let hash_bag_tests =
 
 let _ = run_test_tt_main hash_bag_tests
 
-(* let test =
-  QCheck.Test.make ~count:1000 ~name:"hash_bag_neutral" QCheck.small_nat
-    (fun x -> find (add (init Fun.id) x) x)
+module IntHashBag = Make (struct
+  type t = int
 
-let _ = QCheck.Test.check_exn test *)
+  let hash = Fun.id
+end)
+
+let test =
+  QCheck.Test.make ~count:1000 ~name:"hash_bag_neutral" QCheck.small_nat
+    (fun x -> IntHashBag.(find (add (empty ()) x) x))
+
+let _ = QCheck.Test.check_exn test
