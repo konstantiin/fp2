@@ -20,6 +20,9 @@ module type S' = sig
   val of_list : t list -> hash_map
   val to_list : hash_map -> t list
   val equal : hash_map -> hash_map -> bool
+  val filter : (t -> bool) -> hash_map -> hash_map
+  val fold_left : ('acc -> t -> 'acc) -> 'acc -> hash_map -> 'acc
+  val fold_right : (t -> 'acc -> 'acc) -> hash_map -> 'acc -> 'acc
 end
 
 module type S = sig
@@ -100,6 +103,7 @@ module Make (M : Hashable) = struct
         List.flatten (CCPersistentArray.to_list backets)
         |> List.sort Stdlib.compare
 
+  (* in this case converting to list and sorting is efficient enough for this case *)
   let equal = function
     | backets1, sz1 -> (
         function
@@ -112,4 +116,8 @@ module Make (M : Hashable) = struct
   let map (type tt ht) (module H1 : S' with type t = tt and type hash_map = ht)
       (hm_from : hash_map) (f : t -> tt) =
     to_list hm_from |> List.map f |> H1.of_list
+
+  let filter pred hash_map = to_list hash_map |> List.filter pred |> of_list
+  let fold_left f init hash_map = to_list hash_map |> List.fold_left f init
+  let fold_right f hash_map init = List.fold_right f (to_list hash_map) init
 end

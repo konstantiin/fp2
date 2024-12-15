@@ -18,6 +18,9 @@ module type S' = sig
   val of_list : t list -> hash_map
   val to_list : hash_map -> t list
   val equal : hash_map -> hash_map -> bool
+  val filter : (t -> bool) -> hash_map -> hash_map
+  val fold_left : ('acc -> t -> 'acc) -> 'acc -> hash_map -> 'acc
+  val fold_right : (t -> 'acc -> 'acc) -> hash_map -> 'acc -> 'acc
 end
 
 module type S = sig
