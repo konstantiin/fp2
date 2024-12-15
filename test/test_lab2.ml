@@ -12,26 +12,26 @@ end
 module StringHBag = Make (HashableStr)
 
 let str_bag = StringHBag.empty ()
-let b1 = StringHBag.add str_bag "11"
-let b2 = StringHBag.add b1 "11"
-let b3 = StringHBag.add b2 "33"
-let rb3 = StringHBag.remove b3 "33"
+let b1 = StringHBag.add "11" str_bag
+let b2 = StringHBag.add "11" b1
+let b3 = StringHBag.add "33" b2
+let rb3 = StringHBag.remove "33" b3
 
 let hash_bag_tests =
   "hash_bag tests"
   >::: [
          ( "add + find №1" >:: fun _ ->
-           assert_equal true (StringHBag.find b1 "11") );
+           assert_equal true (StringHBag.find "11" b1) );
          ( "add + find №2" >:: fun _ ->
-           assert_equal true (StringHBag.find b3 "11") );
+           assert_equal true (StringHBag.find "11" b1) );
          ( "add + find №3" >:: fun _ ->
-           assert_equal false (StringHBag.find b3 "22") );
-         ("count №1" >:: fun _ -> assert_equal 2 (StringHBag.count b2 "11"));
-         ("count №2" >:: fun _ -> assert_equal 2 (StringHBag.count b3 "11"));
-         ("count №3" >:: fun _ -> assert_equal 0 (StringHBag.count b3 "22"));
-         ("count №4" >:: fun _ -> assert_equal 1 (StringHBag.count b3 "33"));
-         ("remove №1" >:: fun _ -> assert_equal false (StringHBag.find rb3 "33"));
-         ("remove №2" >:: fun _ -> assert_equal 2 (StringHBag.count rb3 "11"));
+           assert_equal false (StringHBag.find "22" b1) );
+         ("count №1" >:: fun _ -> assert_equal 2 (StringHBag.count "11" b2));
+         ("count №2" >:: fun _ -> assert_equal 2 (StringHBag.count "11" b3));
+         ("count №3" >:: fun _ -> assert_equal 0 (StringHBag.count "22" b3));
+         ("count №4" >:: fun _ -> assert_equal 1 (StringHBag.count "33" b3));
+         ("remove №1" >:: fun _ -> assert_equal false (StringHBag.find "33" rb3));
+         ("remove №2" >:: fun _ -> assert_equal 2 (StringHBag.count "11" rb3));
        ]
 
 let _ = run_test_tt_main hash_bag_tests
@@ -42,8 +42,47 @@ module IntHashBag = Make (struct
   let hash = Fun.id
 end)
 
-let test =
-  QCheck.Test.make ~count:1000 ~name:"hash_bag_neutral" QCheck.small_nat
-    (fun x -> IntHashBag.(find (add (empty ()) x) x))
+let _ =
+  let test =
+    QCheck.Test.make ~count:10000 ~name:"add and remove opposite"
+      QCheck.(pair (list (0 -- 1000)) (-1000 -- 0))
+      (fun (lst, el) ->
+        let bag = IntHashBag.(lst |> of_list |> add el) in
+        IntHashBag.(equal (bag |> remove el) (of_list lst)))
+  in
+  QCheck.Test.check_exn test
 
-let _ = QCheck.Test.check_exn test
+let _ =
+  let test =
+    QCheck.Test.make ~count:10000
+      ~name:"lst |> of_list |> map f <===> lst |> map f |> of_list"
+      QCheck.(list (-1000 -- 1000))
+      (fun lst ->
+        let f = fun x -> x * 100 in
+        let b1 =
+          IntHashBag.map (module IntHashBag) (IntHashBag.of_list lst) f
+        in
+        IntHashBag.(equal (lst |> List.map f |> of_list) b1))
+  in
+  QCheck.Test.check_exn test
+
+let _ =
+  let test =
+    QCheck.Test.make ~count:10000 ~name:"monoid asociative"
+      QCheck.(pair (list (-1000 -- 1000)) (list (-1000 -- 1000)))
+      (fun (lst1, lst2) ->
+        IntHashBag.(
+          equal
+            (of_list lst1 |> join (of_list lst2))
+            (of_list lst2 |> join (of_list lst1))))
+  in
+  QCheck.Test.check_exn test
+
+let _ =
+  let test =
+    QCheck.Test.make ~count:10000 ~name:"monoid neutral"
+      QCheck.(list (-1000 -- 1000))
+      (fun lst ->
+        IntHashBag.(equal (of_list lst |> join (empty ())) (of_list lst)))
+  in
+  QCheck.Test.check_exn test
