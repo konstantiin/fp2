@@ -17,8 +17,8 @@ let b2 = StringHBag.add "11" b1
 let b3 = StringHBag.add "33" b2
 let rb3 = StringHBag.remove "33" b3
 
-let hash_bag_tests =
-  "hash_bag tests"
+let unit_tests =
+  "unit tests"
   >::: [
          ( "add + find №1" >:: fun _ ->
            assert_equal true (StringHBag.find "11" b1) );
@@ -34,7 +34,7 @@ let hash_bag_tests =
          ("remove №2" >:: fun _ -> assert_equal 2 (StringHBag.count "11" rb3));
        ]
 
-let _ = run_test_tt_main hash_bag_tests
+let _ = run_test_tt_main unit_tests
 
 module IntHashBag = Make (struct
   type t = int
@@ -42,47 +42,44 @@ module IntHashBag = Make (struct
   let hash = Fun.id
 end)
 
-let _ =
-  let test =
-    QCheck.Test.make ~count:10000 ~name:"add and remove opposite"
-      QCheck.(pair (list (0 -- 1000)) (-1000 -- 0))
-      (fun (lst, el) ->
-        let bag = IntHashBag.(lst |> of_list |> add el) in
-        IntHashBag.(equal (bag |> remove el) (of_list lst)))
-  in
-  QCheck.Test.check_exn test
+let add_remove_reversability =
+  QCheck.Test.make ~count:10000 ~name:"add and remove opposite"
+    QCheck.(pair (list (0 -- 1000)) (-1000 -- -1))
+    (fun (lst, el) ->
+      let bag = IntHashBag.(lst |> of_list |> add el) in
+      IntHashBag.(equal (bag |> remove el) (of_list lst)))
+
+let map_of_list_associativity =
+  QCheck.Test.make ~count:10000
+    ~name:"lst |> of_list |> map f <===> lst |> map f |> of_list"
+    QCheck.(list (-1000 -- 1000))
+    (fun lst ->
+      let f = fun x -> x * 100 in
+      let b1 = IntHashBag.map (module IntHashBag) (IntHashBag.of_list lst) f in
+      IntHashBag.(equal (lst |> List.map f |> of_list) b1))
+
+let monoid_asociativity =
+  QCheck.Test.make ~count:10000 ~name:"monoid asociativity"
+    QCheck.(pair (list (-1000 -- 1000)) (list (-1000 -- 1000)))
+    (fun (lst1, lst2) ->
+      IntHashBag.(
+        equal
+          (of_list lst1 |> join (of_list lst2))
+          (of_list lst2 |> join (of_list lst1))))
+
+let monoid_neutral =
+  QCheck.Test.make ~count:10000 ~name:"monoid neutral"
+    QCheck.(list (-1000 -- 1000))
+    (fun lst ->
+      IntHashBag.(equal (of_list lst |> join (empty ())) (of_list lst)))
 
 let _ =
-  let test =
-    QCheck.Test.make ~count:10000
-      ~name:"lst |> of_list |> map f <===> lst |> map f |> of_list"
-      QCheck.(list (-1000 -- 1000))
-      (fun lst ->
-        let f = fun x -> x * 100 in
-        let b1 =
-          IntHashBag.map (module IntHashBag) (IntHashBag.of_list lst) f
-        in
-        IntHashBag.(equal (lst |> List.map f |> of_list) b1))
-  in
-  QCheck.Test.check_exn test
+  QCheck_runner.run_tests
+    [
+      add_remove_reversability;
+      map_of_list_associativity;
+      monoid_asociativity;
+      monoid_neutral;
+    ]
 
-let _ =
-  let test =
-    QCheck.Test.make ~count:10000 ~name:"monoid asociative"
-      QCheck.(pair (list (-1000 -- 1000)) (list (-1000 -- 1000)))
-      (fun (lst1, lst2) ->
-        IntHashBag.(
-          equal
-            (of_list lst1 |> join (of_list lst2))
-            (of_list lst2 |> join (of_list lst1))))
-  in
-  QCheck.Test.check_exn test
-
-let _ =
-  let test =
-    QCheck.Test.make ~count:10000 ~name:"monoid neutral"
-      QCheck.(list (-1000 -- 1000))
-      (fun lst ->
-        IntHashBag.(equal (of_list lst |> join (empty ())) (of_list lst)))
-  in
-  QCheck.Test.check_exn test
+let _ = run_test_tt_main
