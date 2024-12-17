@@ -60,12 +60,16 @@ let map_of_list_associativity =
 
 let monoid_asociativity =
   QCheck.Test.make ~count:10000 ~name:"monoid asociativity"
-    QCheck.(pair (list (-1000 -- 1000)) (list (-1000 -- 1000)))
-    (fun (lst1, lst2) ->
+    QCheck.(
+      triple
+        (list (-1000 -- 1000))
+        (list (-1000 -- 1000))
+        (list (-1000 -- 1000)))
+    (fun (lst1, lst2, lst3) ->
+      let hm12 = IntHashBag.(of_list lst1 |> join (of_list lst2)) in
+      let hm23 = IntHashBag.(of_list lst2 |> join (of_list lst3)) in
       IntHashBag.(
-        equal
-          (of_list lst1 |> join (of_list lst2))
-          (of_list lst2 |> join (of_list lst1))))
+        equal (of_list lst1 |> join hm23) (hm12 |> join (of_list lst3))))
 
 let monoid_neutral =
   QCheck.Test.make ~count:10000 ~name:"monoid neutral"
